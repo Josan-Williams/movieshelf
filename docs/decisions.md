@@ -75,3 +75,32 @@ Better Auth creates and manages its own `user` table (plus `session`, `account`,
 ### Trade-offs
 - `user` must be quoted in hand-written SQL.
 - Schema for the `user` table is shaped by Better Auth; changes follow its conventions.
+
+---
+
+## DEC-003 – Separate Docker Compose services for development and test databases
+
+- **Date:** 2026-09-24
+- **Status:** Accepted
+- **Rubric areas:** Testing, CI & documentation
+
+### Context
+Automated tests insert and delete rows and reset tables between tests. Running them against the development database would wipe development data. Two local databases are needed.
+
+### Options considered
+
+| Option | Description | Trade-off |
+|---|---|---|
+| A. One container, two databases | One Postgres service; an init script in `docker-entrypoint-initdb.d` creates the test database | Fewer resources; init script only runs on an empty volume (easy to miss) |
+| B. Two containers | `db` (dev, port 5432) and `db_test` (test, port 5433), same pinned image | Slightly more resources; risk of confusing ports |
+
+### Decision
+**Option B – two separate services.**
+
+### Reason (developer's words)
+"Option B separates servers, reducing any mixups or additional fixes. You can also wipe the whole test container independently. The only downside is confusing the ports."
+
+### Trade-offs and mitigations
+- Port confusion → distinct variable names (`DATABASE_URL` vs `TEST_DATABASE_URL`) and a test setup that refuses to run against a database whose name doesn't end in `_test`. (planned)
+- Both services use the same image tag so dev and test cannot drift.
+- The test service mirrors CI, which also runs a single standalone Postgres.

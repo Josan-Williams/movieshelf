@@ -9,10 +9,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       # Postgres 18+ image: mount at /var/lib/postgresql (NOT /var/lib/postgresql/data)
-      - movieshelf_pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -26,7 +26,7 @@ services:
       POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?Set TEST_POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${TEST_POSTGRES_DB:?Set TEST_POSTGRES_DB in .env}
     ports:
-      - "${TEST_POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${TEST_POSTGRES_PORT:-5433}:5432"
     # In-memory storage: fast, and the test database starts empty on every container start.
     tmpfs:
       - /var/lib/postgresql
@@ -37,4 +37,4 @@ services:
       retries: 10
 
 volumes:
-  movieshelf_pgdata:
+  pgdata:

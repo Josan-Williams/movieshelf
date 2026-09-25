@@ -1,7 +1,8 @@
 // Better Auth core tables (user, session, account, verification).
-// TEMPORARY hand-written version so app tables can reference user.id in Milestone 1.
-// In Milestone 2, regenerate with the Better Auth CLI and compare against this file.
-import { pgTable, text, boolean, timestamp } from "drizzle-orm/pg-core";
+// Compared with `npx auth@1.7.6 generate` output on 2026-09-24. Adopted from the official
+// schema: indexes on session.user_id, account.user_id, verification.identifier and
+// $onUpdate on updated_at. Kept deliberately: timestamps WITH time zone (UTC-safe).
+import { pgTable, text, boolean, timestamp, index } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -10,7 +11,8 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const session = pgTable("session", {
@@ -18,11 +20,12 @@ export const session = pgTable("session", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   token: text("token").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    .$onUpdate(() => new Date()),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-});
+}, (t) => [index("session_user_id_idx").on(t.userId)]);
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -35,10 +38,11 @@ export const account = pgTable("account", {
   accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
   refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
   scope: text("scope"),
-  password: text("password"), // Better Auth stores the password HASH here
+  password: text("password"), // Better Auth stores the password HASH here, never plain text
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    .$onUpdate(() => new Date()),
+}, (t) => [index("account_user_id_idx").on(t.userId)]);
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -46,5 +50,6 @@ export const verification = pgTable("verification", {
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    .$onUpdate(() => new Date()),
+}, (t) => [index("verification_identifier_idx").on(t.identifier)]);

@@ -21,6 +21,10 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgresql://movieshelf_test:ci-only-password@localhost:5432/movieshelf_test
+      # Build-time only: pages are dynamic, so no real database or TMDB/AI calls happen during the build.
+      DATABASE_URL: postgresql://movieshelf_test:ci-only-password@localhost:5432/movieshelf_test
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-any-real-environment-0123456789
+      BETTER_AUTH_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

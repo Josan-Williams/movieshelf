@@ -139,3 +139,48 @@ Initially leaned towards B; switched after comparing the trade-offs.
 - Seeded demo account documented in the README for the evaluator.
 - Email verification and password reset are out of scope (documented limitation).
 - Audit: `auth.sign_up`, `auth.sign_in`, `auth.sign_in_failed`, `auth.sign_out`.
+
+---
+
+## DEC-005 – Audit logging policy for authentication and domain events
+
+- **Date:** 2026-09-25
+- **Status:** Accepted
+- **Rubric areas:** Data & backend, Working solution (audit log), security
+
+### Decisions
+
+| # | Question | Decision | Reason |
+|---|---|---|---|
+| 1 | Store the email tried in a failed sign-in? | **No.** `user_id` is NULL and no email is stored | Avoids storing personal data of people who may not be users (OWASP logging guidance: avoid/mask personal data). Attacks remain detectable from IP + timestamp patterns. Trade-off: we lose which account was targeted. Pseudonymisation (e.g. hashing the email) considered and rejected to keep scope small |
+| 2 | Audit write fails for an **auth** event? | **Sign-in/up/out still succeeds**; the audit failure is reported on the server (`console.error`, visible in Vercel logs) – never silent | MovieShelf is not a high-assurance system; blocking authentication because logging failed is not justified. (If the whole DB were down, sign-in would fail anyway – sessions share the DB) |
+| 3 | Audit write fails for a **domain** event (collection, rating)? | **Same transaction** as the change – if either fails, both roll back | A rating or collection change can never exist without its audit record |
+| 4 | What goes in `details` for auth rows? | Outcome, short reason code (e.g. `invalid_credentials`), IP address, user agent | Supports investigation of suspicious activity |
+| 5 | What never goes in `details`? | Passwords, password hashes, session/access tokens, cookies, API keys, secrets, the tried email | Logs are read more widely than the database and are often retained longer |
+
+### Notes
+- The reason code must never distinguish "email not found" from "wrong password" (would reintroduce account enumeration – watchlist S12).
+- IP address is personal data under GDPR; stored for the legitimate purpose of security monitoring. Documented in the README.
+- Developer's reasoning (own words): "the assessment asks for an audit trail, but this isn't a high-assurance system where denying authentication because an audit subsystem is temporarily unavailable is necessarily justified."
+
+## DEC-006 – TMDB integration: director search via person credits
+
+- **Date:** 2026-09-26
+- **Decision:** Director search resolves the name with `/search/person` (first result whose `known_for_department` is Directing), then reads `/person/{id}/movie_credits` and keeps only crew entries with `job = "Director"`. Genre-only search uses `/discover/movie` (popularity order, `vote_count >= 50`). Director + genre filters the director's films by `genre_ids`.
+- **Why:** `/discover/movie?with_crew=` matches any crew job (producer, writer), which returns wrong results for "movies directed by X".
+- **Trade-offs:** The first matching director wins (ambiguous names are possible); director results are paginated in memory (a director's filmography is small).
+- **Resilience:** 6 s timeout; 429 surfaces as "rate limited", network/5xx/malformed JSON as 503 with a friendly message; malformed items are dropped individually; genre list cached for 1 hour. Movies are stored locally only when a user adds or rates them.
+
+## DEC-007 – AI natural-language search design
+
+- **Date:** 2026-09-26
+- **Decision:** Any OpenAI-compatible chat completions API, configured by `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` (default Google Gemini `gemini-3.5-flash-lite`, chosen for a free tier and low latency). The model returns only `{director, genre}`; the output is validated with a strict Zod schema, the genre is mapped to TMDB's genre list, the director name must match a letters-only pattern, and the search itself is deterministic (DEC-006).
+- **Fallback:** No key, HTTP error, timeout (8 s), invalid JSON, extra keys, wrong types or no usable criteria all switch to a rule-based parser. The UI states which path was used.
+- **Safety:** Query limited to 200 characters; the model has no tools and cannot write data; prompt-injected output can at most produce a wrong search. Every request is audited (`ai.search`) with criteria, source and query length, not the raw text.
+
+## DEC-008 – API shape and authorisation
+
+- **Date:** 2026-09-26
+- **Decision:** Route handlers under `/api` for mutations (`PUT/DELETE /api/collection/{tmdbId}`, `PUT /api/ratings/{tmdbId}`), reads rendered by server components calling the same service functions. Every handler goes through `withUser`, which takes the user from the session cookie, never from the request, and rejects cross-origin mutations (403) on top of SameSite=Lax.
+- **Status codes:** 201 created / 200 already existed or updated / 204 removed / 401 no session / 403 cross-site / 404 not in your collection / 422 validation (strict schemas reject unknown fields) / 429 / 503 upstream. Errors share one shape `{ error: { code, message, fields? } }`; internals are logged server-side only.
+- **Why PUT for add:** idempotent – adding twice is harmless and creates one row and one audit event.

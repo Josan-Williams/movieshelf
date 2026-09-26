@@ -102,3 +102,9 @@ Status key: ☐ not yet addressed · ◐ designed, not implemented/tested · ☑
 - **"Why does `ratings` have a `rating_id` but `collection_items` doesn't?"** – (user_id, movie_id) identifies *both*. `rating_id` is a convenience surrogate key (single-column reference for audit `resource_id`), not a necessity; the business rule is enforced by `UNIQUE (user_id, movie_id)`. Be able to say a composite PK on `ratings` would also be valid.
 - **"Is `UNIQUE` on user_id enough?"** – No. The constraint must be on the *combination*; `UNIQUE (user_id)` alone would allow only one rating per user in total.
 - **"Walk me through a join."** – e.g. genres in my collection: `collection_items` (filtered by session user) → `movie_genres` → `genres`, with `DISTINCT`. The `user` table isn't needed because `user_id` is already in `collection_items`.
+
+## Status after Milestones 2-5 (2026-09-26)
+
+Covered by code and tests: 401 on every protected route and page redirect (S1), user taken from session only and strict schemas rejecting `userId` in bodies (S2/S4), cross-user isolation (S3), cross-origin mutation blocked (S7), generic 500 messages (S9), audit rows in the same transaction as the change with rollback test (D), atomic rating upsert with a concurrency test, TMDB 429/503/timeout/malformed handling (E), AI invalid-output fallbacks and injection cases (AI), security headers (nosniff, frame DENY, referrer policy).
+
+Known limitations to state openly: rate-limited (429) auth requests are not audited; `x-forwarded-for` is only trustworthy behind Vercel; duplicate sign-up reveals that an email exists; no email verification or password reset; in-memory rate-limit store resets per serverless instance.

@@ -104,3 +104,38 @@ Automated tests insert and delete rows and reset tables between tests. Running t
 - Port confusion → distinct variable names (`DATABASE_URL` vs `TEST_DATABASE_URL`) and a test setup that refuses to run against a database whose name doesn't end in `_test`. (planned)
 - Both services use the same image tag so dev and test cannot drift.
 - The test service mirrors CI, which also runs a single standalone Postgres.
+
+---
+
+## DEC-004 – Email and password sign-in (Better Auth)
+
+- **Date:** 2026-09-24
+- **Status:** Accepted
+- **Rubric areas:** Working solution, Data & backend (security)
+
+### Context
+The brief asks for "a minimal but secure authentication approach appropriate for the chosen stack". The evaluator must be able to sign up, sign in and test every journey quickly.
+
+### Options considered
+
+| Option | For | Against |
+|---|---|---|
+| A. Email + password (Better Auth) | Evaluator can register in seconds or use a seeded demo account; no external setup; works identically locally, in CI and when deployed; Better Auth provides password hashing and rate limiting | App is responsible for password-related risks (brute force, enumeration, weak passwords) |
+| B. Google sign-in | No passwords stored | Google app starts in Testing mode (only listed users can sign in); exact callback URLs per environment; evaluator needs a Google account; harder to automate in tests |
+
+Initially leaned towards B; switched after comparing the trade-offs.
+
+### Decision
+**Option A – email and password.**
+
+### Reason (developer's words)
+"I need the evaluator to be able to test the app with as much ease as possible."
+
+### Consequences / mitigations (planned)
+- Password hashing handled by Better Auth – never store or log plain passwords.
+- Rate limiting on sign-in (Better Auth built-in) – watchlist S11.
+- Generic sign-in error ("Invalid email or password") – watchlist S12.
+- Minimum password length enforced.
+- Seeded demo account documented in the README for the evaluator.
+- Email verification and password reset are out of scope (documented limitation).
+- Audit: `auth.sign_up`, `auth.sign_in`, `auth.sign_in_failed`, `auth.sign_out`.

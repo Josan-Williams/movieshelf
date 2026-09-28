@@ -93,6 +93,18 @@ describe("ratings", () => {
 });
 
 describe("activity", () => {
+  it("never returns IP address or user agent to the user", async () => {
+    await db.insert(auditLogs).values({
+      userId: "alice", action: "auth.sign_in", resourceType: "session",
+      details: { ip: "203.0.113.9", userAgent: "Mozilla/5.0" },
+    });
+    const a = await listActivity(db, "alice", 1);
+    expect(a.items[0].details).toEqual({});
+    expect(JSON.stringify(a)).not.toContain("203.0.113.9");
+    const [stored] = await db.select().from(auditLogs);
+    expect(stored.details).toMatchObject({ ip: "203.0.113.9" }); // still kept for investigation
+  });
+
   it("returns only the signed-in user's own events, newest first", async () => {
     await addToCollection(db, "alice", 1);
     await rateMovie(db, "alice", 1, 8, null);

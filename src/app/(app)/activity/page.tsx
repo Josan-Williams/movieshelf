@@ -19,7 +19,6 @@ function describe(details: unknown): string {
   if (d.title) parts.push(String(d.title));
   if (d.value) parts.push(`${d.value}/10`);
   if (d.source) parts.push(`${d.source === "ai" ? "AI" : "fallback"}: ${[d.director, d.genre].filter(Boolean).join(", ") || "no criteria"}`);
-  if (d.ip) parts.push(`IP ${d.ip}`);
   return parts.join(" - ");
 }
 

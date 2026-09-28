@@ -162,6 +162,7 @@ Initially leaned towards B; switched after comparing the trade-offs.
 - The reason code must never distinguish "email not found" from "wrong password" (would reintroduce account enumeration – watchlist S12).
 - IP address is personal data under GDPR; stored for the legitimate purpose of security monitoring. Documented in the README.
 - Developer's reasoning (own words): "the assessment asks for an audit trail, but this isn't a high-assurance system where denying authentication because an audit subsystem is temporarily unavailable is necessarily justified."
+- Amendment (2026-09-28): IP address and user agent are stored for security investigation but never shown in the activity view or API, because accounts such as the demo account can be shared.
 
 ## DEC-006 – TMDB integration: director search via person credits
 

@@ -3,7 +3,7 @@
 ## How to run
 ```powershell
 docker compose up -d db_test
-npm test               # 7 files, 64 tests
+npm test               # 7 files, 65 tests
 npm run test:coverage  # text summary + HTML report in coverage/
 npm run build; npm run test:e2e   # Playwright, starts a fake TMDB and the app on port 3100
 ```
@@ -13,7 +13,7 @@ CI runs lint, typecheck, `test:coverage` and build on every push and pull reques
 | Area | File | Examples |
 |---|---|---|
 | Database rules | `integration/db-constraints.test.ts` | one rating per user/movie, rating 1-10 CHECK, unique tmdb_id, cascades, append-only audit trigger |
-| Business rules | `integration/services.test.ts` | idempotent add with one audit row, remove + 404, cross-user isolation, no writes when TMDB is down, rating create/update, concurrent upsert gives one row, audit rolled back with failed change, own-activity only |
+| Business rules | `integration/services.test.ts` | idempotent add with one audit row, remove + 404, cross-user isolation, no writes when TMDB is down, rating create/update, concurrent upsert gives one row, audit rolled back with failed change, own-activity, IP and user agent never returned in the activity view |
 | API | `integration/api.test.ts` | 401 on every protected route, 403 cross-site, 201/200/204/404 codes, 422 for invalid ids and bodies (incl. unknown `userId` field), 400 malformed JSON, activity has no write methods, AI fallback + audit |
 | Auth audit | `integration/auth-audit.test.ts` | sign-up, failed sign-in (no user id, no email), sign-in, sign-out through Better Auth's real handler; no audit for sign-out without session |
 | TMDB adapter | `unit/tmdb.test.ts` | parsing, malformed items dropped, director-only credits, 429/500/404 mapping, network error, bad JSON, director lookup for people known for acting |

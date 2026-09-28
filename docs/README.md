@@ -31,9 +31,11 @@ npm run dev                    # http://localhost:3000
 npm test               # unit + integration (uses the db_test container; TMDB and AI are mocked)
 npm run test:coverage
 npm run lint; npm run typecheck; npm run build
+npx playwright install chromium   # once
+npm run build; npm run test:e2e   # browser journey on desktop + mobile viewports (fake TMDB, test DB)
 ```
 
-CI runs all of the above on every push against a Postgres service container.
+CI (GitHub Actions) runs lint, typecheck, unit/integration tests with coverage and the build, then the Playwright E2E journey. On `main`, production is deployed to Vercel only after both jobs pass.
 
 ## API
 
@@ -58,7 +60,9 @@ Hosted on Vercel (Node 24) with a Neon Postgres database. To deploy your own: cr
 
 ## Security summary
 
-Passwords hashed by Better Auth (scrypt); HttpOnly SameSite=Lax session cookies (Secure in production); sign-in/sign-up limited to 5 per minute; identical errors for wrong password and unknown email; user identity taken only from the session; strict request schemas (unknown fields rejected); cross-origin mutations blocked; parameterised queries via Drizzle; append-only audit log enforced by a database trigger; security headers; secrets only in environment variables. Known limitations are listed in `docs/evaluator-watchlist.md`.
+Passwords hashed by Better Auth (scrypt); HttpOnly SameSite=Lax session cookies (Secure in production); sign-in/sign-up limited to 5 per minute; identical errors for wrong password and unknown email; user identity taken only from the session; strict request schemas (unknown fields rejected); cross-origin mutations blocked; parameterised queries via Drizzle; append-only audit log enforced by a database trigger; security headers; secrets only in environment variables.
+
+Known limitations: rate-limited (429) sign-in attempts are not audited; client IPs in the audit log are only trustworthy behind Vercel's proxy; duplicate sign-up reveals that an email is registered; no email verification or password reset; the rate-limit store is in memory per serverless instance.
 
 ## Documentation
 
@@ -66,7 +70,6 @@ Passwords hashed by Better Auth (scrypt); HttpOnly SameSite=Lax session cookies 
 - `docs/ai-disclosure.md` - how AI tools were used, with accepted/corrected/rejected suggestions
 - `docs/ai-feature.md` - AI search: provider, model, prompt, fallback, cost, limits
 - `docs/testing.md` - what is tested, coverage and known gaps
-- `docs/evaluator-watchlist.md` - security and quality checklist
 - `docs/erd.png` - database diagram
 
 Movie data from [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed or certified by TMDB.

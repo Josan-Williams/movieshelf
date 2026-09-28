@@ -36,3 +36,58 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run build
+
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: movieshelf_test
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: movieshelf_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U movieshelf_test -d movieshelf_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://movieshelf_test:ci-only-password@localhost:5432/movieshelf_test
+      DATABASE_URL: postgresql://movieshelf_test:ci-only-password@localhost:5432/movieshelf_test
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-any-real-environment-0123456789
+      BETTER_AUTH_URL: http://localhost:3100
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:migrate
+      - run: npm run build
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Production deploy only after lint, typecheck, unit/integration tests, build and E2E all pass.
+  deploy:
+    needs: [check, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npx vercel@60.1.3 pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx vercel@60.1.3 build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx vercel@60.1.3 deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

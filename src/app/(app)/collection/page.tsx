@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { getCurrentUser } from "@/server/session";
+import { requireUser } from "@/server/session";
 import { listCollection } from "@/server/collection";
 import { Poster, year } from "@/components/ui";
 
 export const metadata = { title: "My collection - MovieShelf" };
 
 export default async function CollectionPage() {
-  const user = (await getCurrentUser())!;
+  const user = await requireUser();
   const items = await listCollection(db, user.id);
   return (
     <div className="flex flex-col gap-4">

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { getCurrentUser } from "@/server/session";
+import { requireUser } from "@/server/session";
 import { getMovieWithUserState } from "@/server/movies";
 import { TmdbIdParam } from "@/server/validation";
 import { AppError } from "@/server/errors";
@@ -10,7 +10,7 @@ import { Alert, Poster, year } from "@/components/ui";
 export default async function MoviePage({ params }: PageProps<"/movies/[tmdbId]">) {
   const id = TmdbIdParam.safeParse((await params).tmdbId);
   if (!id.success) notFound();
-  const user = (await getCurrentUser())!; // guaranteed by (app)/layout
+  const user = await requireUser();
   let movie;
   try {
     movie = await getMovieWithUserState(db, user.id, id.data);

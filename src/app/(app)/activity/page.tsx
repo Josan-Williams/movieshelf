@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { getCurrentUser } from "@/server/session";
+import { requireUser } from "@/server/session";
 import { listActivity } from "@/server/activity";
 import { PageQuery } from "@/server/validation";
 
@@ -24,7 +24,7 @@ function describe(details: unknown): string {
 }
 
 export default async function ActivityPage({ searchParams }: PageProps<"/activity">) {
-  const user = (await getCurrentUser())!;
+  const user = await requireUser();
   const { page } = PageQuery.catch({ page: 1 }).parse(await searchParams);
   const log = await listActivity(db, user.id, page);
   return (

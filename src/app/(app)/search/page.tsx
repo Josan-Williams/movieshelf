@@ -3,6 +3,7 @@ import { SearchQuery } from "@/server/validation";
 import { searchMovies } from "@/server/movies";
 import { getGenres, type Genre } from "@/server/tmdb";
 import { AppError } from "@/server/errors";
+import { requireUser } from "@/server/session";
 import { MovieGrid } from "@/components/movie-grid";
 import { AiSearch } from "@/components/ai-search";
 import { Alert, Button, inputCls } from "@/components/ui";
@@ -10,6 +11,7 @@ import { Alert, Button, inputCls } from "@/components/ui";
 export const metadata = { title: "Search - MovieShelf" };
 
 export default async function SearchPage({ searchParams }: PageProps<"/search">) {
+  await requireUser(); // TMDB is only called for signed-in users
   const parsed = SearchQuery.safeParse(await searchParams);
   const q = parsed.success ? parsed.data : { director: undefined, genre: undefined, page: 1 };
 

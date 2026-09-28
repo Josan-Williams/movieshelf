@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   test: {
     environment: "node",
+    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"], // e2e runs in Playwright
     globalSetup: ["./tests/setup/global-setup.ts"],
     fileParallelism: false, // test files share one database
     env: {
